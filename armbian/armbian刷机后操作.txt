@@ -1,0 +1,164 @@
+#开启CPU节能（默认已开启）
+sudo apt update
+sudo apt install cpufrequtils
+cpufreq-info -p
+echo "GOVERNOR='powersave'" | sudo tee /etc/sysfs.conf > /dev/null
+echo ondemond | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor > /dev/null
+
+#脚本缩减dd备份armbian镜像
+wget https://raw.githubusercontent.com/lededev/ArmbianShrink/master/armbianshrink.sh
+chmod +x armbianshrink.sh
+sudo mv armbianshrink.sh /usr/local/bin
+sudo rm/usr/local/bin/armbianshrink.sh
+sudo armbianshrink.sh Armbian.img newArmbian.img
+
+#设置Linux用户无口令登陆方式：
+有些时候需要用户能够无密码登陆，解放办法很简单，卡起armbian后：
+切换到root用户，修改/etc/shadow文件。
+chmod 644 /etc/shadow
+vim /etc/shadow 
+去掉用户的密码串即可
+
+#armbian bookworm更换国内软件源并一键更新
+sed -i.bak 's#https://apt.armbian.com#https://mirrors.tuna.tsinghua.edu.cn/armbian#g' /etc/apt/sources.list.d/armbian.sources
+sed -i.bak 's#http://deb.debian.org/debian#https://mirrors.tuna.tsinghua.edu.cn/debian#g' /etc/apt/sources.list.d/debian.sources
+sed -i.bak 's#http://ports.ubuntu.com/#https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/#g' /etc/apt/sources.list.d/ubuntu.sources
+cat /etc/apt/sources.list.d/armbian.sources
+cat /etc/apt/sources.list.d/debian.sources
+apt-get update&&apt-get upgrade&&apt-get autoremove
+apt-get autoclean
+apt-get install neofetch net-tools
+neofetch
+
+#armbian nobel更换国内软件源
+https://mirrors.tuna.tsinghua.edu.cn/debian
+https://mirrors.tuna.tsinghua.edu.cn/armbian
+替换armbian.list为清华源
+sed -i.bak 's#https://apt.armbian.com#https://mirrors.tuna.tsinghua.edu.cn/armbian#g' /etc/apt/sources.list.d/armbian.sources
+替换sources.list为阿里云
+sed -i.bak 's#http://ports.ubuntu.com#http://mirrors.aliyun.com/ubuntu-ports#g' /etc/apt/sources.list.d/ubuntu.sources
+还原
+sed -i.bak 's#http://mirrors.aliyun.com/armbian#http://mirrors.aliyun.com/ubuntu-ports#g' /etc/apt/sources.list.d/ubuntu.sources
+替换sources.list为清华源
+sed -i.bak 's#http://ports.ubuntu.com#https://mirrors.tuna.tsinghua.edu.cn/armbian#g' /etc/apt/sources.list
+还原
+sed -i.bak 's#https://mirrors.tuna.tsinghua.edu.cn/armbian#http://ports.ubuntu.com#g' /etc/apt/sources.list
+cat /etc/apt/sources.list
+cat /etc/apt/sources.list.d/armbian.list
+
+#两种方式补齐缺失证书：
+curl 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xdf00faf1c577104b50bf1d0093d6889f9f0e78d5' | gpg --dearmor | tee /etc/apt/trusted.gpg.d/armbian.gpg
+wget -qO - https://apt.armbian.com/armbian.key | gpg --dearmor | tee /usr/share/keyrings/armbian.gpg
+
+#手动更新armbian-config
+apt-get install apt-transport-https armbian-config
+
+#更换欢迎界面版型为fmx1-pro
+sed -i '/BOARD_NAME=/cBOARD_NAME="fmx1-pro"' /etc/armbian-release
+sed -i '/BOARD=/cBOARD="fmx1-pro"' /etc/armbian-release
+chattr +i /etc/armbian-release
+ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+cat /etc/armbian-release
+
+#一键安装纯净版宝塔9.5.0
+if [ -f /usr/bin/curl ];then curl -sSO http://bt950.hostcli.com/install/install_panel.sh;else wget -O install_panel.sh http://bt950.hostcli.com/install/install_panel.sh;fi;bash install_panel.sh www.HostCLi.com
+
+
+#libc-bin安装出错搜了一通之后，找到解决方法：
+#- 将info文件夹更名
+#- 再新建一个新的info文件夹
+#- 更新列表
+#- 重新安装
+#- 将新创建的info目录中的文件复制到老的info目录
+#- 删除新的info目录
+#- 将旧的info目录更名为原来的目录名
+#总结命令如下：
+mv /var/lib/dpkg/info/ /var/lib/dpkg/info_old/
+mkdir /var/lib/dpkg/info/
+apt-get update
+apt-get -f install
+mv /var/lib/dpkg/info/* /var/lib/dpkg/info_old/
+rm -rf /var/lib/dpkg/info
+mv /var/lib/dpkg/info_old/ /var/lib/dpkg/info/
+
+#另一个宝塔面板开心版9.5.0
+if [ -f /usr/bin/curl ];then curl -sSO http://bt95.btkaixin.net/install/install_panel.sh;else wget -O install_panel.sh http://bt95.btkaixin.net/install/install_panel.sh;fi;bash install_panel.sh www.BTKaiXin.com
+
+
+#1Panel 社区版安装脚本
+curl -sSL https://resource.fit2cloud.com/1panel/package/quick_start.sh -o quick_start.sh && bash quick_start.sh
+
+#重新挂载分区可读
+mount -o remount, rw /
+mount -o remount,rw /system
+mount -o remount,rw /vendor
+
+#内核是否支持CAN
+sudo modprobe can && echo "您的内核支持CAN" || echo "您的内核不支持CAN"
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+
+#对文件权限误操作导致的sudo报错Sudo doesn‘t work: “/etc/sudoers is owned by uid 1000, should be 0”的问题
+chown -R $USER /etc
+chown -R root /etc
+chmod o+rx /etc
+chown -R root:root /etc/sudoers.d
+chown -R root:root /etc
+armbian-tf
+armbian-fix
+armbian-sycn
+armbian-update
+armbian-upgrade
+apt-get update&&apt-get upgrade&&apt-get autoremove
+apt-get autoclean
+apt-get install neofetch
+neofetch
+
+在 EmuELEC 的 ssh 里面, 通过 fw_setenv 命令删除变量 bootfromsd
+
+fw_setenv bootfromsd
+# 再运行 fw_printenv 确认 bootfromsd 变量已经删除
+fw_printenv
+
+
+EmuELEC开启蓝牙
+ln -s /usr/lib/kernel-overlays/base/lib/firmware/rtl_bt/rtl8761b_fw.bin /lib/firmware/rtlbt/rtl8761b_fw
+ln -s /usr/lib/kernel-overlays/base/lib/firmware/rtl_bt/rtl8761b_config.bin /lib/firmware/rtlbt/rtl8761b_config
+
+
+在系统中存在一个 rtkbt-firmware-aml.service 服务, 文件位于 /usr/lib/systemd/system/rtkbt-firmware-aml.service 内容如下
+[Unit]
+Description=Attach /dev/ttyS1 to BlueZ stack using rtk_h5 type
+Wants=bluetooth.service
+Before=bluetooth.service
+After=dev-ttyS1.device
+[Service]
+Type=simple
+ExecStartPre=/usr/sbin/rfkill unblock bluetooth
+ExecStart=/usr/bin/rtk_hciattach -n -s 115200 /dev/ttyS1 rtk_h5
+ExecStopPost=/usr/sbin/rfkill block bluetooth
+所以添加完软链后, 也可以通过systemctl start rtkbt-firmware-aml启动蓝牙
+
+安卓TV 安装armbian-开机一直失败解决办法（亲测有效）
+主要步骤总结：
+1，下载ADB工具包（官网：http://adbshell.com/downloads）
+2，打开cmd ，使用adb连接电视盒子
+电视盒子连接网线，和电脑在同一局域网内，查看电视盒子的IP地址：
+adb connect 192.168.1.15:5555
+3,打开adb 的终端
+adb shell
+4,进入到指定路径,查看env目录
+ls /dev/block/env
+cat /dev/block/env
+一堆乱码信息
+这是emmc 芯片内的启动信息，也就是我们使用SD卡/优盘 安装失败的根本原因，就是这里的信息影响了从优盘启动！！！
+5，清空这里信息
+dd  if=/dev/zero of=/dev/block/env
+6,重启更新
+reboot update
+perfect end
